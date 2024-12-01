@@ -88,45 +88,17 @@ To set up the project and install the necessary dependencies, follow these steps
 
 To train the posture detection model:
 
-1. **Dataset Preparation:** Ensure your dataset contains images with labeled "true" (correct posture) and "false" (incorrect posture) classes.
+1. **Dataset Preparation:**
+Image Data:
+
+Ensure that the dataset contains images labeled as true (correct posture) and false (incorrect posture).
+Images must be processed to extract keypoints, which will be used for classification.
+Keypoint Normalization:
+
+The keypoints extracted from images must be normalized to a consistent scale for proper model training and inference.
+Use the normalize_keypoints function to normalize the keypoints. This will ensure that the model receives consistent input, regardless of the image resolution or the distance of the person from the camera.
 2. **Model Architecture:** Use a suitable model architecture (e.g., a neural network) to learn posture patterns based on the keypoints.
 3. **Training Script:** Train the model on the dataset with proper preprocessing, including keypoint normalization.
-
-Example training code:
-```python
-from torch.utils.data import DataLoader
-from dataset import PostureDataset
-from model import SittingPostureModel
-
-# Load the dataset
-train_dataset = PostureDataset(root_dir="path_to_data", transform=your_transforms)
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-
-# Initialize the model
-model = SittingPostureModel()
-
-# Define loss and optimizer
-criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-# Training loop
-for epoch in range(10):
-    model.train()
-    for batch in train_loader:
-        # Process batch
-        inputs, labels = batch
-        optimizer.zero_grad()
-
-        # Forward pass
-        outputs = model(inputs)
-
-        # Compute loss
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-    print(f"Epoch [{epoch + 1}/10], Loss: {loss.item()}")
-```
 
 ## Contributing
 
