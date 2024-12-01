@@ -58,59 +58,24 @@ To set up the project and install the necessary dependencies, follow these steps
    To detect the posture, use the provided model (e.g., a deep learning classifier). Below is an example to predict the posture using the extracted keypoints:
 
    ```python
-   from model import SittingPostureModel
-   from utils import extract_keypoints
-
-   # Initialize the model
-   model = SittingPostureModel()
-
-   # Load your image and extract keypoints
-   image_path = "path_to_your_image.jpg"
-   image = cv2.imread(image_path)
-   keypoints = extract_keypoints(image)
-
-   # Make a prediction
-   prediction = model.predict(keypoints)
-   print("Posture prediction:", "Correct" if prediction == 1 else "Incorrect")
+    def inference(model, image, adj_matrix, device):
+        # Load and preprocess the image
+        keypoints = extract_keypoints(image)
+        if keypoints is None:
+            return None
+        keypoints = normalize_keypoints(keypoints)
+        
+        keypoints_tensor = torch.tensor(keypoints, dtype=torch.float32, device=device)
+        adj_matrix_tensor = torch.tensor(adj_matrix, dtype=torch.float32, device=device)
+        
+        model.eval()
+        with torch.no_grad():
+            logits = model(keypoints_tensor, adj_matrix_tensor) 
+            prediction = torch.argmax(logits, dim=0).item() 
+    
+    return prediction
    ```
 
-3. **Run the system with video input:**
-   If you want to run the system on video input and detect postures in real-time, use the following script:
-
-   ```python
-   import cv2
-   from utils import extract_keypoints
-   from model import SittingPostureModel
-
-   # Initialize model
-   model = SittingPostureModel()
-
-   # Open video stream
-   cap = cv2.VideoCapture(0)  # Use 0 for webcam or provide a file path for a video file
-
-   while True:
-       ret, frame = cap.read()
-       if not ret:
-           break
-
-       # Extract keypoints from the frame
-       keypoints = extract_keypoints(frame)
-
-       if keypoints:
-           # Make a prediction on the posture
-           prediction = model.predict(keypoints)
-           posture_text = "Correct" if prediction == 1 else "Incorrect"
-
-           # Display the posture on the frame
-           cv2.putText(frame, f"Posture: {posture_text}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-           cv2.imshow("Posture Detection", frame)
-
-       if cv2.waitKey(1) & 0xFF == ord('q'):
-           break
-
-   cap.release()
-   cv2.destroyAllWindows()
-   ```
 
 ## Features
 
