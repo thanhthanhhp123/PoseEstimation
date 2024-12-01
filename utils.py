@@ -9,8 +9,8 @@ from torch.utils.data import Dataset
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(static_image_mode=True, model_complexity=2, enable_segmentation=False)
 
-def extract_keypoints(image_path, confidence_threshold=0.5):
-    image = cv2.imread(image_path)
+def extract_keypoints(image, confidence_threshold=0.5):
+    # image = cv2.imread(image_path)
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     result = pose.process(image_rgb)
 
@@ -99,19 +99,19 @@ def create_adjacency_matrix():
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 
-def draw_keypoints_mediapipe(image_path, prediction=None, confidence=None):
+def draw_keypoints_mediapipe(image, prediction=None, confidence=None):
     """
     Draw keypoints using Mediapipe's built-in drawing function and add prediction text.
     
     Args:
-        image_path (str): Path to the input image.
+        image_path (str): Input image.
         prediction (int or None): Predicted class (0: incorrect, 1: correct, or None for no prediction).
         confidence (float or None): Confidence score of the prediction (optional).
     
     Returns:
         np.ndarray: Annotated image.
     """
-    image = cv2.imread(image_path)
+    # image = cv2.imread(image_path)
     # image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
     with mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.5) as pose:
