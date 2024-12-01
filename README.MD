@@ -109,7 +109,7 @@ We welcome contributions to this project! If you'd like to improve the system or
 
 ### Inference example
 
-![Input Image](assets/input_image.jpg)
+![Input Image](assets/input.jpg)
 
 
-![Output Image](assets/output_image.jpg)
+![Output Image](assets/output.jpg)
