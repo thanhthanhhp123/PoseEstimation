@@ -23,8 +23,8 @@ To set up the project and install the necessary dependencies, follow these steps
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/your-username/sitting-posture-detection.git
-   cd sitting-posture-detection
+   git clone https://github.com/thanhthanhhp123/PoseEstimation.git
+   cd PoseEstimation
    ```
 
 2. Create a virtual environment (optional but recommended):
