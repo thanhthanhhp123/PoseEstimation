@@ -40,12 +40,14 @@ if __name__ == "__main__":
     mp_drawing = mp.solutions.drawing_utils
     image_path = "images/False/5febda34-52fd-4e79-bcd5-9d4c7a803be8_frame_0000.jpg"
     image = cv2.imread(image_path)
+    cv2.imwrite("assets/input.jpg", image)
     start = time.time()
     prediction = inference(model, image, adj_matrix, device)
     end = time.time()
     print(f'Inference time: {end - start:.4f} seconds')
     print(f"Prediction: {'True' if prediction == 0 else 'False'}")
     cv2.imshow("Image", draw_keypoints_mediapipe(image, prediction, confidence=0.5))
+    cv2.imwrite("assets/output.jpg", draw_keypoints_mediapipe(image, prediction, confidence=0.5))
     cv2.waitKey(0)
 
 

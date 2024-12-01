@@ -107,3 +107,9 @@ We welcome contributions to this project! If you'd like to improve the system or
 5. Open a pull request.
 
 
+### Inference example
+
+![Input Image](assets/input_image.jpg)
+
+
+![Output Image](assets/output_image.jpg)
