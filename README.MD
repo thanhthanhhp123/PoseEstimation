@@ -4,11 +4,17 @@ This project aims to develop a system that detects whether a person is sitting i
 
 ## Table of Contents
 
+- [Contact](#contact)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Features](#features)
 - [Contributing](#contributing)
 - [License](#license)
+
+## Contact
+
+1. Facebook: thanhvipvclok
+2. Email: thanhmaxdz2003@gmail.com
 
 ## Installation
 
@@ -100,8 +106,4 @@ We welcome contributions to this project! If you'd like to improve the system or
 4. Push to your fork (`git push origin feature-name`).
 5. Open a pull request.
 
-## Contact
-
-Facebook: thanhvipvclok
-Email: thanhmaxdz2003@gmail.com
 
