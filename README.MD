@@ -85,15 +85,7 @@ To set up the project and install the necessary dependencies, follow these steps
 
 To train the posture detection model:
 
-1. **Dataset Preparation:**
-
-Image Data:
-Ensure that the dataset contains images labeled as true (correct posture) and false (incorrect posture).
-Images must be processed to extract keypoints, which will be used for classification.
-Keypoint Normalization:
-
-The keypoints extracted from images must be normalized to a consistent scale for proper model training and inference.
-Use the normalize_keypoints function to normalize the keypoints. This will ensure that the model receives consistent input, regardless of the image resolution or the distance of the person from the camera.
+1. **Dataset Preparation:** Normalized keypoints from images
 
 2. **Model Architecture:** Use a suitable model architecture (e.g., a neural network) to learn posture patterns based on the keypoints.
 3. **Training Script:** Train the model on the dataset with proper preprocessing, including keypoint normalization.
@@ -108,4 +100,8 @@ We welcome contributions to this project! If you'd like to improve the system or
 4. Push to your fork (`git push origin feature-name`).
 5. Open a pull request.
 
+## Contact
+
+Facebook: thanhvipvclok
+Email: thanhmaxdz2003@gmail.com
 
