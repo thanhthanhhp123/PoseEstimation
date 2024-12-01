@@ -1,3 +1,4 @@
 images/
 keypoints_dataset/
 Videos/
+__pycache__/
