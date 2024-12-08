@@ -14,6 +14,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 adj_matrix = create_adjacency_matrix()
 model = GCN(in_features=3, hidden_features=64, out_features=2, device=device)
 model.load_state_dict(torch.load("model.pth"))
+model.to(device)
 
 
 def inference(model, image, adj_matrix, device):
@@ -36,19 +37,50 @@ def inference(model, image, adj_matrix, device):
 
 if __name__ == "__main__":
     import time
-    mp_pose = mp.solutions.pose
-    mp_drawing = mp.solutions.drawing_utils
-    image_path = "images/False/5febda34-52fd-4e79-bcd5-9d4c7a803be8_frame_0000.jpg"
-    image = cv2.imread(image_path)
-    cv2.imwrite("assets/input.jpg", image)
-    start = time.time()
-    prediction = inference(model, image, adj_matrix, device)
-    end = time.time()
-    print(f'Inference time: {end - start:.4f} seconds')
-    print(f"Prediction: {'True' if prediction == 0 else 'False'}")
-    cv2.imshow("Image", draw_keypoints_mediapipe(image, prediction, confidence=0.5))
-    cv2.imwrite("assets/output.jpg", draw_keypoints_mediapipe(image, prediction, confidence=0.5))
-    cv2.waitKey(0)
+    # mp_pose = mp.solutions.pose
+    # mp_drawing = mp.solutions.drawing_utils
+
+    last_infer_time = time.time() 
+    infer_interval = 4
+    cap = cv2.VideoCapture(0)
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        current_time = time.time()
+        if current_time - last_infer_time >= infer_interval:
+            prediction = inference(model, frame, adj_matrix, device)
+        else:
+            prediction = ""
+        cv2.imshow("Image", draw_keypoints_mediapipe(frame, prediction, confidence=0.5))
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # image_path = "images/False/5febda34-52fd-4e79-bcd5-9d4c7a803be8_frame_0000.jpg"
+    # image = cv2.imread(image_path)
+    # cv2.imwrite("assets/input.jpg", image)
+    # start = time.time()
+    # prediction = inference(model, image, adj_matrix, device)
+    # end = time.time()
+    # print(f'Inference time: {end - start:.4f} seconds')
+    # print(f"Prediction: {'True' if prediction == 0 else 'False'}")
+    # cv2.imshow("Image", draw_keypoints_mediapipe(image, prediction, confidence=0.5))
+    # cv2.imwrite("assets/output.jpg", draw_keypoints_mediapipe(image, prediction, confidence=0.5))
+    # cv2.waitKey(0)
 
 
 

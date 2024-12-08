@@ -139,7 +139,7 @@ def draw_keypoints_mediapipe(image, prediction=None, confidence=None):
             lineType=cv2.LINE_AA,
         )
     
-    if prediction is not None:
+    if prediction is not None and results.pose_landmarks:
         text = 'Correct Posture' if prediction == 0 else 'Incorrect Posture'
         color = (0, 255, 0) if prediction == 0 else (0, 0, 255)  # Green for correct, red for incorrect
         if confidence is not None:
