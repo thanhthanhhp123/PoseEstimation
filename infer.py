@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     last_infer_time = time.time() 
     infer_interval = 4
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(r'Videos\True\aa2d94e9-c934-46ae-b627-e0704062a54d.mp4')
     while True:
         ret, frame = cap.read()
         if not ret:
