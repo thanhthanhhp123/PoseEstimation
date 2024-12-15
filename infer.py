@@ -13,7 +13,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 adj_matrix = create_adjacency_matrix()
 model = GCN(in_features=3, hidden_features=64, out_features=2, device=device)
-model.load_state_dict(torch.load("model.pth"))
+model.load_state_dict(torch.load("model.pth", map_location=device))
 model.to(device)
 
 

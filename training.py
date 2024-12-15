@@ -6,47 +6,67 @@ import torch.optim as optim
 from utils import *
 from net import *
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
+import warnings 
+warnings.filterwarnings("ignore")
 
 
-adj_matrix = create_adjacency_matrix()
-keypoints_dir = "keypoints_dataset"
-label_map = {"true": 0, "false": 1}
-dataset = KeypointDataset(keypoints_dir, label_map)
-dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+def train():
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
 
 
-model = GCN(in_features=3, hidden_features=64, out_features=2, device=device)
-model.to(device)
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+    adj_matrix = create_adjacency_matrix()
+    keypoints_dir = "keypoints_dataset_new"
+    label_map = {"true": 0, "false": 1}
+    dataset = KeypointDataset(keypoints_dir, label_map)
+    dataloader = DataLoader(dataset, batch_size=512, shuffle=True, num_workers=4)
+    train_size = int(0.8 * len(dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+    train_dataloader = DataLoader(train_dataset, batch_size=512, shuffle=True, num_workers=4)
+    test_dataloader = DataLoader(test_dataset, batch_size=512, shuffle=False, num_workers=4)
 
-num_epochs = 20 
-for epoch in range(num_epochs):
-    model.train()
-    epoch_loss = 0
-    correct = 0
-    total = 0
+    print(f"Training set size: {len(train_dataset)}")
+    print(f"Test set size: {len(test_dataset)}")
 
-    for keypoints, label in dataloader:
+    
 
-        keypoints = keypoints.squeeze(0).to(device) 
-        label = label.to(device)
 
-        optimizer.zero_grad()
+    model = GCN(in_features=3, hidden_features=64, out_features=2, device=device)
+    model.to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    print("Starting training...")
+    num_epochs = 5
+    for epoch in range(num_epochs):
+        model.train()
+        epoch_loss = 0
+        correct = 0
+        total = 0
 
-        logits = model(keypoints, adj_matrix)
-        loss = criterion(logits.unsqueeze(0), label)
-        epoch_loss += loss.item()
+        for keypoints, labels in train_dataloader:
 
-        loss.backward()
-        optimizer.step()
+            keypoints = keypoints.to(device) 
+            labels = labels.to(device)
 
-        pred = logits.argmax(dim=0).item()
-        correct += (pred == label.item())
-        total += 1
+            optimizer.zero_grad()
 
-    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Accuracy: {correct / total:.4f}")
+            logits = model(keypoints, adj_matrix)
+            loss = criterion(logits, labels)
+            epoch_loss += loss.item()
 
-torch.save(model.state_dict(), "model.pth")
+            loss.backward()
+            optimizer.step()
+
+            _, predicted = torch.max(logits, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+        torch.save(model.state_dict(), f"new_model_{epoch}.pth")
+
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Accuracy: {correct / total:.4f}")
+
+    torch.save(model.state_dict(), "new_model.pth")
+
+if __name__ == "__main__":
+    train()
