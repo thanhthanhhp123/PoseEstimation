@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
 
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(static_image_mode=True, model_complexity=2, enable_segmentation=False)
@@ -198,4 +199,11 @@ class KeypointDataset(Dataset):
             keypoints = self.transform(keypoints)
         return torch.tensor(keypoints, dtype=torch.float32), label
     
-
+if __name__ == '__main__':
+    keypoints_dir = "keypoints_dataset_new"
+    label_map = {"true": 0, "false": 1}
+    dataset = KeypointDataset(keypoints_dir, label_map)
+    dataloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=4)
+    for keypoints, labels in dataloader:
+        print(keypoints.shape, labels)
+        break
