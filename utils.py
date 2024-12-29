@@ -155,34 +155,64 @@ def draw_keypoints_mediapipe(image, prediction=None, confidence=None):
             thickness=2,
             lineType=cv2.LINE_AA,
         )
+    else:
+        pass
 
     return annotated_image
 
 
+def augment_keypoints(keypoints):
+    """
+    Apply data augmentation to keypoints.
+    Args:
+        keypoints (list): List of keypoints, each containing [x, y, confidence].
+    Returns:
+        list: Augmented keypoints.
+    """
+    keypoints = np.array(keypoints)  # Convert to numpy array for augmentation
+    confidence = keypoints[:, 2]    # Preserve confidence scores
+
+    scale_factor = np.random.uniform(0.9, 1.1)  # Random scaling
+    rotation_angle = np.random.uniform(-15, 15)  # Random rotation in degrees
+    translation = np.random.uniform(-0.1, 0.1, size=(2,))  # Random translation
+
+    keypoints[:, :2] *= scale_factor
+
+    theta = np.radians(rotation_angle)
+    rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], 
+                                 [np.sin(theta), np.cos(theta)]])
+    keypoints[:, :2] = np.dot(keypoints[:, :2], rotation_matrix.T)
+
+    keypoints[:, :2] += translation
+
+    keypoints[:, 2] = confidence
+    return keypoints.tolist()
 
 
 
 
 class KeypointDataset(Dataset):
-    def __init__(self, data_dir, label_map, confidence_threshold=0.5, transform=None):
+    def __init__(self, data_dir, label_map, confidence_threshold=0.5, augment=False):
         """
         Args:
             data_dir (str): Path to the keypoints directory.
             label_map (dict): Mapping of folder names to class labels (e.g., {'true': 0, 'false': 1}).
             confidence_threshold (float): Confidence threshold for keypoints.
-            transform (callable, optional): Transform to apply to keypoints.
+            augment (bool): Whether to apply data augmentation.
         """
         self.data_dir = data_dir
         self.label_map = label_map
         self.confidence_threshold = confidence_threshold
-        self.transform = transform
+        self.augment = augment
         self.samples = self._load_samples()
 
     def _load_samples(self):
         samples = []
         for label_name, label in self.label_map.items():
             folder_path = os.path.join(self.data_dir, label_name)
-            for file_name in os.listdir(folder_path):
+            if not os.path.isdir(folder_path):
+                raise FileNotFoundError(f"Directory {folder_path} not found.")
+            for file_name in sorted(os.listdir(folder_path)):  # Sort files for consistency
                 if file_name.endswith(".json"):
                     samples.append((os.path.join(folder_path, file_name), label))
         return samples
@@ -192,18 +222,25 @@ class KeypointDataset(Dataset):
 
     def __getitem__(self, idx):
         file_path, label = self.samples[idx]
-        with open(file_path, 'r') as f:
-            keypoints = json.load(f)
+        try:
+            with open(file_path, 'r') as f:
+                keypoints = json.load(f)
+        except json.JSONDecodeError:
+            raise ValueError(f"Error decoding JSON file: {file_path}")
+        
         keypoints = normalize_keypoints(keypoints, self.confidence_threshold)
-        if self.transform:
-            keypoints = self.transform(keypoints)
-        return torch.tensor(keypoints, dtype=torch.float32), label
+        
+        # Apply augmentation if enabled
+        if self.augment:
+            keypoints = augment_keypoints(keypoints)
+        
+        return torch.tensor(keypoints, dtype=torch.float32), torch.tensor(label, dtype=torch.long)
     
 if __name__ == '__main__':
     keypoints_dir = "keypoints_dataset_new"
     label_map = {"true": 0, "false": 1}
-    dataset = KeypointDataset(keypoints_dir, label_map)
+    dataset = KeypointDataset(keypoints_dir, label_map, augment=True)
     dataloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=4)
     for keypoints, labels in dataloader:
-        print(keypoints.shape, labels)
+        print(keypoints.shape, labels.size(0))
         break

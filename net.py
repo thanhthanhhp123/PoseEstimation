@@ -20,9 +20,16 @@ class GCNLayer(nn.Module):
         # Graph convolution
         normalized_adj = normalized_adj.to(self.device)
         out = normalized_adj @ x @ self.weight
+        
+        if out.shape[0] == 1:
+            out = out.squeeze(0)
 
         # Apply batch normalization and dropout
-        B, N, F = out.shape
+        try:
+            B, N, F = out.shape
+        except ValueError:
+            B = 1
+            N, F = out.shape
         out = self.batch_norm(out.view(-1, F)).view(B, N, F)  # BatchNorm for graph data
         out = self.dropout(out)
         return out

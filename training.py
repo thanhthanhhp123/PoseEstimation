@@ -20,13 +20,13 @@ def train():
     adj_matrix = create_adjacency_matrix()
     keypoints_dir = "keypoints_dataset_new"
     label_map = {"true": 0, "false": 1}
-    dataset = KeypointDataset(keypoints_dir, label_map)
+    dataset = KeypointDataset(keypoints_dir, label_map, augment=True)
     # dataloader = DataLoader(dataset, batch_size=512, shuffle=True, num_workers=4)
     train_size = int(0.8 * len(dataset))
     test_size = len(dataset) - train_size
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
     train_dataloader = DataLoader(train_dataset, batch_size=512, shuffle=True, num_workers=2)
-    # test_dataloader = DataLoader(test_dataset, batch_size=512, shuffle=False, num_workers=2)
+    test_dataloader = DataLoader(test_dataset, batch_size=512, shuffle=False, num_workers=2)
 
     print(f"Training set size: {len(train_dataset)}")
     print(f"Test set size: {len(test_dataset)}")
@@ -35,9 +35,10 @@ def train():
 
 
     model = GCN(in_features=3, hidden_features=64, out_features=2, device=device)
+    model.load_state_dict(torch.load("models/new_model.pth", map_location=device))
     model.to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=5e-4)
     print("Starting training...")
     num_epochs = 50
     start = time.time()
@@ -67,6 +68,19 @@ def train():
         torch.save(model.state_dict(), f"models/new_model_{epoch}.pth")
 
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Accuracy: {correct / total:.4f}")
+
+        with torch.no_grad():
+            model.eval()
+            correct = 0
+            total = 0
+            for keypoints, labels in test_dataloader:
+                keypoints = keypoints.unsqueeze(0).to(device)
+                labels = labels.to(device)
+                logits = model(keypoints, adj_matrix)
+                _, predicted = torch.max(logits, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+            print(f"Test accuracy: {correct / total:.4f}")
     end = time.time()
     print(f"Training took {end - start:.2f} seconds")
     torch.save(model.state_dict(), "models/new_model.pth")

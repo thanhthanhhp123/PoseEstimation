@@ -50,7 +50,7 @@ if __name__ == "__main__":
         if current_time - last_infer_time >= infer_interval:
             prediction = inference(model, frame, adj_matrix, device)
         else:
-            prediction = ""
+            prediction = None
         cv2.imshow("Image", draw_keypoints_mediapipe(frame, prediction, confidence=0.8))
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
