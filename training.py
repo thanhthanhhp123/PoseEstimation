@@ -6,6 +6,14 @@ import time
 
 from utils import *
 from net import *
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)  # Example for filtering UserWarnings
+warnings.filterwarnings('ignore', category=UserWarning, module='tensorflow')
+
+
+import os
+
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 import warnings 
 warnings.filterwarnings("ignore")
@@ -18,15 +26,15 @@ def train():
 
 
     adj_matrix = create_adjacency_matrix()
-    keypoints_dir = "keypoints_dataset_new"
+    keypoints_dir = "keypoints_dataset"
     label_map = {"true": 0, "false": 1}
     dataset = KeypointDataset(keypoints_dir, label_map, augment=True)
     # dataloader = DataLoader(dataset, batch_size=512, shuffle=True, num_workers=4)
-    train_size = int(0.8 * len(dataset))
+    train_size = int(0.9 * len(dataset))
     test_size = len(dataset) - train_size
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
-    train_dataloader = DataLoader(train_dataset, batch_size=512, shuffle=True, num_workers=2)
-    test_dataloader = DataLoader(test_dataset, batch_size=512, shuffle=False, num_workers=2)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=2)
+    test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=2)
 
     print(f"Training set size: {len(train_dataset)}")
     print(f"Test set size: {len(test_dataset)}")
@@ -34,11 +42,11 @@ def train():
     
 
 
-    model = GCN(in_features=3, hidden_features=64, out_features=2, device=device)
-    model.load_state_dict(torch.load("models/new_model.pth", map_location=device))
+    model = GCN(in_features=2, hidden_features=128, out_features=2, device=device)
     model.to(device)
+    model.load_state_dict(torch.load(r"models\new_model.pth", map_location=device))
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=5e-4)
+    optimizer = optim.Adam(model.parameters(), lr=0.00001)
     print("Starting training...")
     num_epochs = 50
     start = time.time()

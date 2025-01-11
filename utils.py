@@ -6,21 +6,43 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+import os
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)  # Example for filtering UserWarnings
+warnings.filterwarnings('ignore', category=UserWarning, module='tensorflow')
 
+
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(static_image_mode=True, model_complexity=2, enable_segmentation=False)
 
-def extract_keypoints(image, confidence_threshold=0.5):
-    # image = cv2.imread(image_path)
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    result = pose.process(image_rgb)
-
-    if result.pose_landmarks:
-        keypoints = []
-        for lm in result.pose_landmarks.landmark:
-            keypoints.append([lm.x, lm.y, lm.visibility])
-        return keypoints
-    return None
+def extract_keypoints(frame):
+        """
+        Trích xuất tọa độ của 5 điểm được chọn từ frame
+        Returns: array shape (10,) chứa tọa độ x,y của 5 điểm
+        """
+        selected_landmarks = [
+            0,   # nose
+            11,  # left shoulder
+            12,  # right shoulder
+            23,  # left hip
+            24   # right hip
+        ]
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = pose.process(image)
+        
+        
+        if results.pose_landmarks:
+            keypoints = []
+            landmarks = results.pose_landmarks.landmark
+            
+            # Chỉ lấy các điểm được chọn
+            for idx in selected_landmarks:
+                point = landmarks[idx]
+                keypoints.append([point.x, point.y])
+            
+            return keypoints
+        return np.zeros(10)
 
 def process_folder(input_dir, output_dir):
     """
@@ -44,107 +66,130 @@ def process_folder(input_dir, output_dir):
                 os.remove(image_path)
 
 
-def normalize_keypoints(keypoints, confidence_threshold=0.5):
+def normalize_keypoints(keypoints):
     """
     Normalize keypoints: translation to origin and scale normalization.
 
     Args:
-        keypoints (list): A list of keypoints [x, y, confidence].
-        confidence_threshold (float): Minimum confidence to include keypoints.
+        keypoints (numpy.ndarray): Keypoints array of shape (N, 2), where each row is [x, y].
 
     Returns:
-        numpy.ndarray: Normalized keypoints of shape (33, 3).
+        numpy.ndarray: Normalized keypoints of shape (N, 2).
     """
-    keypoints = np.array(keypoints)
-    mask = keypoints[:, 2] >= confidence_threshold 
-    keypoints[~mask, :2] = 0 
+    # Đảm bảo keypoints là NumPy array
+    keypoints = np.array(keypoints)  # Shape: (N, 2)
+
+    if keypoints.shape[0] == 0:
+        return np.array([])  # Trả về mảng rỗng nếu không có keypoints
+
+    # Dịch tọa độ keypoints về gốc (translation)
+    centroid = np.mean(keypoints, axis=0)  # Tính trung tâm (centroid) của các điểm
+    translated_points = keypoints - centroid  # Dịch tất cả các điểm về gốc
+
+    # Chuẩn hóa tỉ lệ (scale normalization)
+    max_distance = np.linalg.norm(translated_points, axis=1).max()  # Khoảng cách lớn nhất từ gốc đến các điểm
+    if max_distance > 0:
+        normalized_points = translated_points / max_distance  # Chia tất cả tọa độ cho khoảng cách lớn nhất
+    else:
+        normalized_points = translated_points  # Nếu max_distance là 0, không cần chuẩn hóa
+
+    return normalized_points
 
 
-    if mask.sum() > 0:  
-        hips = keypoints[[11, 12], :2]  
-        if np.all(mask[[11, 12]]):  
-            center = hips.mean(axis=0)
-        else:
-            center = keypoints[mask, :2].mean(axis=0)
-        keypoints[:, :2] -= center
-
-    distances = np.linalg.norm(keypoints[mask, :2], axis=1)  
-    max_distance = distances.max() if distances.size > 0 else 1
-    keypoints[:, :2] /= max_distance
-
-    return keypoints
-
+import numpy as np
+import torch
 
 def create_adjacency_matrix():
     """
-    Create the adjacency matrix for the skeleton graph.
+    Create the adjacency matrix for a skeleton graph with 5 nodes.
     Returns:
-        torch.Tensor: Adjacency matrix of shape (33, 33).
+        torch.Tensor: Adjacency matrix of shape (5, 5).
     """
+    # Danh sách kết nối giữa các nút (ví dụ)
     connections = [
-        (0, 1), (1, 2), (2, 3), (3, 7),  # Spine
-        (0, 4), (4, 5), (5, 6),         # Right arm
-        (0, 8), (8, 9), (9, 10),        # Left arm
-        (11, 12), (12, 13), (13, 14),   # Right leg
-        (11, 15), (15, 16), (16, 17),   # Left leg
-        (18, 19), (19, 20), (20, 21),   # Right foot
-        (22, 23), (23, 24), (24, 25)    # Left foot
+        (0, 1),  # Kết nối giữa nút 0 và nút 1
+        (1, 2),  # Kết nối giữa nút 1 và nút 2
+        (2, 3),  # Kết nối giữa nút 2 và nút 3
+        (3, 4),  # Kết nối giữa nút 3 và nút 4
+        (0, 4)   # Kết nối giữa nút 0 và nút 4
     ]
-    adjacency_matrix = np.zeros((33, 33))
+    
+    num_nodes = 5  # Tổng số nút trong đồ thị
+    adjacency_matrix = np.zeros((num_nodes, num_nodes), dtype=np.float32)
+    
     for i, j in connections:
         adjacency_matrix[i, j] = 1
-        adjacency_matrix[j, i] = 1
+        adjacency_matrix[j, i] = 1  # Đảm bảo đồ thị là không hướng (undirected)
+
     return torch.tensor(adjacency_matrix, dtype=torch.float32)
 
+
+
+mp_pose = mp.solutions.pose
+mp_drawing = mp.solutions.drawing_utils
+
+import cv2
+import mediapipe as mp
+import numpy as np
 
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 
 def draw_keypoints_mediapipe(image, prediction=None, confidence=None):
     """
-    Draw keypoints using Mediapipe's built-in drawing function and add prediction text.
-    
+    Draw selected keypoints and add prediction text.
+
     Args:
-        image_path (str): Input image.
+        image (np.ndarray): Input image.
         prediction (int or None): Predicted class (0: incorrect, 1: correct, or None for no prediction).
         confidence (float or None): Confidence score of the prediction (optional).
-    
+
     Returns:
         np.ndarray: Annotated image.
     """
-    # image = cv2.imread(image_path)
-    # image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    
-    with mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.5) as pose:
+    selected_landmarks = [0, 11, 12, 23, 24]  # nose, left shoulder, right shoulder, left hip, right hip
+
+    with mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.5, smooth_landmarks=True) as pose:
         results = pose.process(image)
-    
+
+    annotated_image = image.copy()
+
     if results.pose_landmarks:
-        annotated_image = image.copy()
-        mp_drawing.draw_landmarks(
-            image=annotated_image,
-            landmark_list=results.pose_landmarks,
-            connections=mp_pose.POSE_CONNECTIONS,
-            landmark_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 255), thickness=2, circle_radius=2),
-            connection_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=2)
-        )
+        h, w, _ = image.shape  # Kích thước ảnh
+        landmarks = results.pose_landmarks.landmark
+
+        for idx in selected_landmarks:
+            if idx < len(landmarks):
+                landmark = landmarks[idx]
+                cx, cy = int(landmark.x * w), int(landmark.y * h)  # Chuyển đổi tọa độ về pixel
+                cv2.circle(annotated_image, (cx, cy), 5, (0, 255, 255), -1)  # Vẽ điểm màu vàng
+                cv2.putText(
+                    annotated_image,
+                    f"{idx}",
+                    (cx, cy - 10),
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=0.5,
+                    color=(255, 255, 255),  # Màu trắng cho chỉ số
+                    thickness=1,
+                    lineType=cv2.LINE_AA,
+                )
     else:
-        annotated_image = image.copy()
         cv2.putText(
             annotated_image,
             "No keypoints detected",
             (10, 50),
             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
             fontScale=1,
-            color=(0, 0, 255),  # Red for no keypoints
+            color=(0, 0, 255),  # Màu đỏ khi không có điểm
             thickness=2,
             lineType=cv2.LINE_AA,
         )
-    
+
     if prediction is not None and results.pose_landmarks:
-        text = 'Correct Posture' if prediction == 0 else 'Incorrect Posture'
-        color = (0, 255, 0) if prediction == 0 else (0, 0, 255)  # Green for correct, red for incorrect
+        text = "Correct Posture" if prediction == 0 else "Incorrect Posture"
+        color = (0, 255, 0) if prediction == 0 else (0, 0, 255)  # Màu xanh lá cho đúng, đỏ cho sai
         if confidence is not None:
-            text += f" with confidence =  ({confidence:.2f})"
+            text += f" with confidence = ({confidence:.2f})"
         cv2.putText(
             annotated_image,
             text,
@@ -155,38 +200,54 @@ def draw_keypoints_mediapipe(image, prediction=None, confidence=None):
             thickness=2,
             lineType=cv2.LINE_AA,
         )
-    else:
-        pass
 
     return annotated_image
 
 
-def augment_keypoints(keypoints):
+
+import numpy as np
+
+def augment_keypoints(
+    keypoints, 
+    scale_range=(0.9, 1.1), 
+    rotation_range=(-15, 15), 
+    translation_range=(-0.1, 0.1)
+):
     """
     Apply data augmentation to keypoints.
+    
     Args:
-        keypoints (list): List of keypoints, each containing [x, y, confidence].
+        keypoints (list or np.ndarray): List or array of keypoints, each containing [x, y].
+        scale_range (tuple): Min and max scaling factor.
+        rotation_range (tuple): Min and max rotation angle in degrees.
+        translation_range (tuple): Min and max translation for x and y.
+    
     Returns:
-        list: Augmented keypoints.
+        np.ndarray: Augmented keypoints of shape (N, 2).
     """
-    keypoints = np.array(keypoints)  # Convert to numpy array for augmentation
-    confidence = keypoints[:, 2]    # Preserve confidence scores
+    if not isinstance(keypoints, (list, np.ndarray)):
+        raise TypeError("Keypoints must be a list or numpy array.")
+    
+    keypoints = np.array(keypoints, dtype=np.float32)  # Ensure numpy array
+    if keypoints.ndim != 2 or keypoints.shape[1] != 2:
+        raise ValueError("Keypoints must have shape (N, 2).")
+    
+    # Scaling
+    scale_factor = np.random.uniform(*scale_range)
+    keypoints *= scale_factor
 
-    scale_factor = np.random.uniform(0.9, 1.1)  # Random scaling
-    rotation_angle = np.random.uniform(-15, 15)  # Random rotation in degrees
-    translation = np.random.uniform(-0.1, 0.1, size=(2,))  # Random translation
-
-    keypoints[:, :2] *= scale_factor
-
+    # Rotation
+    rotation_angle = np.random.uniform(*rotation_range)
     theta = np.radians(rotation_angle)
     rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], 
-                                 [np.sin(theta), np.cos(theta)]])
-    keypoints[:, :2] = np.dot(keypoints[:, :2], rotation_matrix.T)
+                                 [np.sin(theta),  np.cos(theta)]])
+    keypoints = np.dot(keypoints, rotation_matrix.T)
 
-    keypoints[:, :2] += translation
+    # Translation
+    translation = np.random.uniform(*translation_range, size=(2,))
+    keypoints += translation
 
-    keypoints[:, 2] = confidence
-    return keypoints.tolist()
+    return keypoints
 
 
 
@@ -228,7 +289,7 @@ class KeypointDataset(Dataset):
         except json.JSONDecodeError:
             raise ValueError(f"Error decoding JSON file: {file_path}")
         
-        keypoints = normalize_keypoints(keypoints, self.confidence_threshold)
+        keypoints = normalize_keypoints(keypoints)
         
         # Apply augmentation if enabled
         if self.augment:
@@ -240,7 +301,7 @@ if __name__ == '__main__':
     keypoints_dir = "keypoints_dataset_new"
     label_map = {"true": 0, "false": 1}
     dataset = KeypointDataset(keypoints_dir, label_map, augment=True)
-    dataloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=4)
+    dataloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=2)
     for keypoints, labels in dataloader:
-        print(keypoints.shape, labels.size(0))
+        print(keypoints[0], labels[0])
         break

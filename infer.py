@@ -8,12 +8,14 @@ from net import *
 
 import warnings
 warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore", category=UserWarning)  # Example for filtering UserWarnings
+warnings.filterwarnings('ignore', category=UserWarning, module='tensorflow')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 adj_matrix = create_adjacency_matrix()
-model = GCN(in_features=3, hidden_features=64, out_features=2, device=device)
-model.load_state_dict(torch.load("models/new_model.pth", map_location=device))
+model = GCN(in_features=2, hidden_features=128, out_features=2, device=device)
+model.load_state_dict(torch.load(r"models\new_model_49.pth", map_location=device))
 model.to(device)
 
 
@@ -39,19 +41,14 @@ if __name__ == "__main__":
     mp_pose = mp.solutions.pose
     mp_drawing = mp.solutions.drawing_utils
 
-    last_infer_time = time.time() 
-    infer_interval = 4
-    cap = cv2.VideoCapture(r'Videos\videopa.mp4')
+    cap = cv2.VideoCapture(r'Videos\false\video_20250108_112459.mp4')
     while True:
         ret, frame = cap.read()
         if not ret:
             break
         current_time = time.time()
-        if current_time - last_infer_time >= infer_interval:
-            prediction = inference(model, frame, adj_matrix, device)
-        else:
-            prediction = None
-        cv2.imshow("Image", draw_keypoints_mediapipe(frame, prediction, confidence=0.8))
+        prediction = inference(model, frame, adj_matrix, device)
+        cv2.imshow("Image", draw_keypoints_mediapipe(frame, prediction, confidence=0.5))
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     cap.release()
