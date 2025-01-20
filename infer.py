@@ -24,6 +24,7 @@ def inference(model, image, adj_matrix, device):
     keypoints = extract_keypoints(image)
     if keypoints is None:
         return None
+    print(np.array(keypoints).shape)
     keypoints = normalize_keypoints(keypoints)
     
     keypoints_tensor = torch.tensor(keypoints, dtype=torch.float32, device=device).unsqueeze(0)
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     mp_pose = mp.solutions.pose
     mp_drawing = mp.solutions.drawing_utils
 
-    cap = cv2.VideoCapture(r'Videos\false\video_20250108_112459.mp4')
+    cap = cv2.VideoCapture(r'abcvideo.mp4')
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -55,19 +56,20 @@ if __name__ == "__main__":
     cv2.destroyAllWindows()
 
 
+    #infer on video and save the output
+    # cap = cv2.VideoCapture(r'Videos\false\video_20250108_112459.mp4')
+    # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    # out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))
+    # while True:
+    #     ret, frame = cap.read()
+    #     if not ret:
+    #         break
+    #     prediction = inference(model, frame, adj_matrix, device)
+    #     out.write(draw_keypoints_mediapipe(frame, prediction, confidence=0.5))
+    # cap.release()
+    # out.release()
+    # cv2.destroyAllWindows()
 
-
-    # image_path = r"E:\Project\Pose\newpics\True\20241210_170405_frame_0000.jpg"
-    # image = cv2.imread(image_path)
-    # cv2.imwrite("input.jpg", image)
-    # start = time.time()
-    # prediction = inference(model, image, adj_matrix, device)
-    # end = time.time()
-    # print(f'Inference time: {end - start:.4f} seconds')
-    # print(f"Prediction: {'True' if prediction == 0 else 'False'}")
-    # cv2.imshow("Image", draw_keypoints_mediapipe(image, prediction, confidence=0.5))
-    # cv2.imwrite("output.jpg", draw_keypoints_mediapipe(image, prediction, confidence=0.5))
-    # cv2.waitKey(0)
 
 
 

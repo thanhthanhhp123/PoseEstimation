@@ -42,7 +42,7 @@ def extract_keypoints(frame):
                 keypoints.append([point.x, point.y])
             
             return keypoints
-        return np.zeros(10)
+        return None
 
 def process_folder(input_dir, output_dir):
     """
